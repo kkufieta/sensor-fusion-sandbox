@@ -1,0 +1,9 @@
+[submodule "opencv-exercises"]
+	path = opencv-exercises
+	url = https://github.com/kkufieta/opencv-exercises
+[submodule "ttc-lidar"]
+	path = ttc-lidar
+	url = https://github.com/kkufieta/ttc-lidar
+[submodule "ttc-camera"]
+	path = ttc-camera
+	url = https://github.com/kkufieta/ttc-camera
