@@ -51,9 +51,32 @@ void matchDescriptors(cv::Mat &imgSource, cv::Mat &imgRef,
   } else if (selectorType.compare("SEL_KNN") ==
              0) { // k nearest neighbors (k=2)
 
-    // TODO : implement k-nearest-neighbor matching
+    // Implement k-nearest-neighbor matching
+    vector<vector<cv::DMatch>> knnMatches;
+    int k = 2;
+    double t = (double)cv::getTickCount();
+    matcher->knnMatch(descSource, descRef, knnMatches,
+                      2); // finds the 2 best matches
+    t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
+    cout << " (kNN) with k=2 and n=" << knnMatches.size() << " matches in "
+         << 1000 * t / 1.0 << " ms" << endl;
 
-    // TODO : filter matches using descriptor distance ratio test
+    // Filter matches using descriptor distance ratio test
+    float ratio;
+    int numTotalMatches = knnMatches.size();
+    int numDiscardedMatches = 0;
+    double minDistanceRatio = 0.8;
+    for (vector<cv::DMatch> kMatch : knnMatches) {
+      ratio = kMatch[0].distance / kMatch[1].distance;
+      if (ratio <= minDistanceRatio) {
+        matches.push_back(kMatch[0]);
+      } else {
+        numDiscardedMatches += 1;
+      }
+    }
+    cout << "Number discarded matches: " << numDiscardedMatches << endl;
+    cout << "Percentage discarded matches: "
+         << numDiscardedMatches / (float)numTotalMatches << endl;
   }
 
   // visualize results
@@ -73,17 +96,17 @@ int main() {
   cv::Mat imgRef = cv::imread("../images/img2gray.png");
 
   vector<cv::KeyPoint> kptsSource, kptsRef;
-  readKeypoints("../dat/C35A5_KptsSource_BRISK_large.dat", kptsSource);
-  readKeypoints("../dat/C35A5_KptsRef_BRISK_large.dat", kptsRef);
+  readKeypoints("../dat/C35A5_KptsSource_BRISK_small.dat", kptsSource);
+  readKeypoints("../dat/C35A5_KptsRef_BRISK_small.dat", kptsRef);
 
   cv::Mat descSource, descRef;
-  readDescriptors("../dat/C35A5_DescSource_BRISK_large.dat", descSource);
-  readDescriptors("../dat/C35A5_DescRef_BRISK_large.dat", descRef);
+  readDescriptors("../dat/C35A5_DescSource_BRISK_small.dat", descSource);
+  readDescriptors("../dat/C35A5_DescRef_BRISK_small.dat", descRef);
 
   vector<cv::DMatch> matches;
   string matcherType = "MAT_BF";
   string descriptorType = "DES_BINARY";
-  string selectorType = "SEL_NN";
+  string selectorType = "SEL_KNN";
   matchDescriptors(imgSource, imgRef, kptsSource, kptsRef, descSource, descRef,
                    matches, descriptorType, matcherType, selectorType);
 }
