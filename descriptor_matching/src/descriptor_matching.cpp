@@ -33,8 +33,7 @@ void matchDescriptors(cv::Mat &imgSource, cv::Mat &imgRef,
       descSource.convertTo(descSource, CV_32F);
       descRef.convertTo(descRef, CV_32F);
     }
-
-    //... TODO : implement FLANN matching
+    matcher = cv::DescriptorMatcher::create(cv::DescriptorMatcher::FLANNBASED);
     cout << "FLANN matching";
   }
 
@@ -85,10 +84,11 @@ void matchDescriptors(cv::Mat &imgSource, cv::Mat &imgRef,
                   cv::Scalar::all(-1), cv::Scalar::all(-1), vector<char>(),
                   cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 
-  string windowName = "Matching keypoints between two camera images (best 50)";
+  string windowName =
+      "Matching keypoints between two camera images (best 50): " + matcherType +
+      ", " + descriptorType + ", " + selectorType;
   cv::namedWindow(windowName, 7);
   cv::imshow(windowName, matchImg);
-  cv::waitKey(0);
 }
 
 int main() {
@@ -96,17 +96,46 @@ int main() {
   cv::Mat imgRef = cv::imread("../images/img2gray.png");
 
   vector<cv::KeyPoint> kptsSource, kptsRef;
-  readKeypoints("../dat/C35A5_KptsSource_BRISK_small.dat", kptsSource);
-  readKeypoints("../dat/C35A5_KptsRef_BRISK_small.dat", kptsRef);
+  readKeypoints("../dat/C35A5_KptsSource_BRISK_large.dat", kptsSource);
+  readKeypoints("../dat/C35A5_KptsRef_BRISK_large.dat", kptsRef);
 
   cv::Mat descSource, descRef;
-  readDescriptors("../dat/C35A5_DescSource_BRISK_small.dat", descSource);
-  readDescriptors("../dat/C35A5_DescRef_BRISK_small.dat", descRef);
+  readDescriptors("../dat/C35A5_DescSource_BRISK_large.dat", descSource);
+  readDescriptors("../dat/C35A5_DescRef_BRISK_large.dat", descRef);
 
-  vector<cv::DMatch> matches;
+  // BRISK keypoints
+  vector<cv::DMatch> matches_bf_brisk;
   string matcherType = "MAT_BF";
   string descriptorType = "DES_BINARY";
   string selectorType = "SEL_KNN";
   matchDescriptors(imgSource, imgRef, kptsSource, kptsRef, descSource, descRef,
-                   matches, descriptorType, matcherType, selectorType);
+                   matches_bf_brisk, descriptorType, matcherType, selectorType);
+  vector<cv::DMatch> matches_flann_brisk;
+  matcherType = "MAT_FLANN";
+  descriptorType = "DES_BINARY";
+  selectorType = "SEL_KNN";
+  matchDescriptors(imgSource, imgRef, kptsSource, kptsRef, descSource, descRef,
+                   matches_flann_brisk, descriptorType, matcherType,
+                   selectorType);
+
+  // SIFT keypoints
+  readKeypoints("../dat/C35A5_KptsSource_SIFT.dat", kptsSource);
+  readKeypoints("../dat/C35A5_KptsRef_SIFT.dat", kptsRef);
+  readDescriptors("../dat/C35A5_DescSource_SIFT.dat", descSource);
+  readDescriptors("../dat/C35A5_DescRef_SIFT.dat", descRef);
+
+  vector<cv::DMatch> matches_bf_sift;
+  matcherType = "MAT_BF";
+  descriptorType = "DES_L2";
+  selectorType = "SEL_KNN";
+  matchDescriptors(imgSource, imgRef, kptsSource, kptsRef, descSource, descRef,
+                   matches_bf_sift, descriptorType, matcherType, selectorType);
+  vector<cv::DMatch> matches_flann_sift;
+  matcherType = "MAT_FLANN";
+  descriptorType = "DES_L2";
+  selectorType = "SEL_KNN";
+  matchDescriptors(imgSource, imgRef, kptsSource, kptsRef, descSource, descRef,
+                   matches_flann_sift, descriptorType, matcherType,
+                   selectorType);
+  cv::waitKey(0);
 }
