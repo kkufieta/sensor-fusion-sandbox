@@ -90,7 +90,7 @@ void projectLidarToCamera2() {
     // d) Values that are showing a reflectivity close to zero, which might
     // indicate low reliability e) Values that are too far off the sides (abs(y)
     // > yMax, e.g. yMax = 6.0)
-    float xMax = 25.0, yMax = 6.0, zMin = -1.5;
+    float xMax = 30.0, yMax = 6.0, zMin = -1.5;
     if (it->x > xMax || it->x <= 0.0 || abs(it->y) > yMax || it->z < zMin ||
         it->r < 0.01) {
       continue;
@@ -114,7 +114,7 @@ void projectLidarToCamera2() {
     pt.y = Y.at<double>(1, 0) / Y.at<double>(2, 0);
 
     float val = it->x;
-    float maxVal = 20.0;
+    float maxVal = xMax;
     int red = min(255, (int)(255 * abs((val - maxVal) / maxVal)));
     int green = min(255, (int)(255 * (1 - abs((val - maxVal) / maxVal))));
     cv::circle(overlay, pt, 5, cv::Scalar(0, green, red), -1);
