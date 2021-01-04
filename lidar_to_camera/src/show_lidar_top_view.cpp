@@ -3,6 +3,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <string>
 
 #include "structIO.hpp"
 
@@ -26,13 +27,24 @@ void showLidarTopview() {
     int y = (-xw * imageSize.height / worldSize.height) + imageSize.height;
     int x = (-yw * imageSize.width / worldSize.width) + imageSize.width / 2;
 
-    cv::circle(topviewImg, cv::Point(x, y), 5, cv::Scalar(0, 0, 255), -1);
-
-    // TODO:
-    // 1. Change the color of the Lidar points such that
-    // X=0.0m corresponds to red while X=20.0m is shown as green.
-    // 2. Remove all Lidar points on the road surface while preserving
+    // Remove all Lidar points on the road surface while preserving
     // measurements on the obstacles in the scene.
+    // Naive approach to remove the lidar points on the road surface. Should be
+    // done using RANSAC
+    float zmin = -1.4;
+    if ((*it).z >= zmin) {
+      // Change the color of the Lidar points such that
+      // X=0.0m corresponds to red while X=20.0m is shown as green.
+      cv::circle(topviewImg, cv::Point(x, y), 5,
+                 cv::Scalar(0, (int)255 * (xw / worldSize.height),
+                            (int)255 * (1 - xw / worldSize.height)),
+                 -1);
+      // Alternatively: Color code the intensity value of the lidar point
+      // TODO: Take the intensity distribution into account
+      //   cv::circle(topviewImg, cv::Point(x, y), 5,
+      //              cv::Scalar(0, (int)255 * (*it).r, (int)255 * (1 -
+      //              (*it).r)), -1);
+    }
   }
 
   // plot distance markers
@@ -42,7 +54,13 @@ void showLidarTopview() {
     int y = (-(i * lineSpacing) * imageSize.height / worldSize.height) +
             imageSize.height;
     cv::line(topviewImg, cv::Point(0, y), cv::Point(imageSize.width, y),
-             cv::Scalar(255, 0, 0));
+             cv::Scalar(255, 150, 150));
+    cv::putText(topviewImg,                             // target image
+                to_string((int)lineSpacing * i) + " m", // text
+                cv::Point(4, y - 8),                    // top-left position
+                cv::FONT_HERSHEY_DUPLEX, 1.0,
+                CV_RGB(150, 150, 255), // font color
+                2);
   }
 
   // display image
