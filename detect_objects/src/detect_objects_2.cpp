@@ -30,10 +30,12 @@ void detectObjects2(cv::Mat &img) {
   net.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
   net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
 
+  double t = (double)cv::getTickCount();
   // generate 4D blob from input image
   cv::Mat blob;
+  int blobSize = 160; // 160 or 320 or 416 or 608
   double scalefactor = 1 / 255.0;
-  cv::Size size = cv::Size(416, 416);
+  cv::Size size = cv::Size(blobSize, blobSize);
   cv::Scalar mean = cv::Scalar(0, 0, 0);
   bool swapRB = false;
   bool crop = false;
@@ -101,7 +103,7 @@ void detectObjects2(cv::Mat &img) {
   }
 
   // perform non-maxima suppression
-  float nmsThreshold = 0.4; // Non-maximum suppression threshold
+  float nmsThreshold = 0.9; // Non-maximum suppression threshold
   vector<int> indices;
   cv::dnn::NMSBoxes(boxes, confidences, confThreshold, nmsThreshold, indices);
   std::vector<BoundingBox> bBoxes;
@@ -116,6 +118,10 @@ void detectObjects2(cv::Mat &img) {
 
     bBoxes.push_back(bBox);
   }
+
+  t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
+  cout << "Detect objects with blob image size = " << blobSize << " in "
+       << 1000 * t / 1.0 << " ms" << endl;
 
   // show results
   cv::Mat visImg = img.clone();
