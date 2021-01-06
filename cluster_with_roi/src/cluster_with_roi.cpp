@@ -133,20 +133,42 @@ void clusterLidarWithROI(std::vector<BoundingBox> &boundingBoxes,
     double shrinkFactor = 0.10;
     vector<vector<BoundingBox>::iterator>
         enclosingBoxes; // pointers to all bounding boxes which enclose the
-                        // current Lidar point
+    // current Lidar point
+
+    auto createBoundingBox = [](vector<BoundingBox>::iterator it,
+                                double shrinkFactor) {
+      cv::Rect smallerBox;
+      smallerBox.x = it->roi.x + shrinkFactor * it->roi.width / 2.0;
+      smallerBox.y = it->roi.y + shrinkFactor * it->roi.height / 2.0;
+      smallerBox.width = it->roi.width * (1 - shrinkFactor);
+      smallerBox.height = it->roi.height * (1 - shrinkFactor);
+
+      return smallerBox;
+    };
+
     for (vector<BoundingBox>::iterator it2 = boundingBoxes.begin();
          it2 != boundingBoxes.end(); ++it2) {
       // shrink current bounding box slightly to avoid having too many outlier
       // points around the edges
-      cv::Rect smallerBox;
-      smallerBox.x = (*it2).roi.x + shrinkFactor * (*it2).roi.width / 2.0;
-      smallerBox.y = (*it2).roi.y + shrinkFactor * (*it2).roi.height / 2.0;
-      smallerBox.width = (*it2).roi.width * (1 - shrinkFactor);
-      smallerBox.height = (*it2).roi.height * (1 - shrinkFactor);
+      cv::Rect smallerBox = createBoundingBox(it2, shrinkFactor);
 
       // check wether point is within current bounding box
       if (smallerBox.contains(pt)) {
-        it2->lidarPoints.push_back(*it1);
+        // check whether point is in any other box as well
+        bool containedInTwoBoxes = false;
+        for (vector<BoundingBox>::iterator it3 = it2 + 1;
+             it3 != boundingBoxes.end(); ++it3) {
+          // shrink current bounding box slightly to avoid having too many
+          // outlier points around the edges
+          cv::Rect smallerBox = createBoundingBox(it3, shrinkFactor);
+          if (smallerBox.contains(pt)) {
+            containedInTwoBoxes = true;
+            break;
+          }
+        }
+        if (!containedInTwoBoxes) {
+          it2->lidarPoints.push_back(*it1);
+        }
         lidarPoints.erase(it1);
         it1--;
         break;
