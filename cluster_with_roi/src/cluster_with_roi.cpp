@@ -178,6 +178,81 @@ void clusterLidarWithROI(std::vector<BoundingBox> &boundingBoxes,
   } // eof loop over all Lidar points
 }
 
+void show3DObjects(std::vector<BoundingBox> boundingBoxes, cv::Size worldSize,
+                   cv::Size imageSize, bool bWait = true) {
+  cv::Mat topviewImg(imageSize, CV_8UC3, cv::Scalar(255, 255, 255));
+
+  // loop over bounding boxes and plot lidar points into topviewImg, enclosed in
+  // a bounding box and with stats
+  for (auto it1 = boundingBoxes.begin(); it1 != boundingBoxes.end(); ++it1) {
+    cv::RNG rng(it1->boxID);
+    cv::Scalar color = cv::Scalar(rng.uniform(0, 150), rng.uniform(0, 150),
+                                  rng.uniform(0, 150));
+
+    // plot lidar points into image
+    int top = 1e8, left = 1e8, bottom = 0, right = 0;
+    float xwmin = 1e8, ywmin = 1e8, ywmax = -1e8;
+    for (auto it2 = it1->lidarPoints.begin(); it2 != it1->lidarPoints.end();
+         ++it2) {
+      float xw =
+          it2->x; // world position in m with x facing forward from sensor
+      float yw =
+          it2->y; // world position in m with y facing forward from sensor
+
+      // find closest point in x direction and width
+      xwmin = xw < xwmin ? xw : xwmin;
+      ywmin = yw < ywmin ? yw : ywmin;
+      ywmax = yw > ywmax ? yw : ywmax;
+
+      int y = (-xw * imageSize.height / worldSize.height) + imageSize.height;
+      int x = (-yw * imageSize.width / worldSize.width) + imageSize.width / 2;
+
+      // find bounding box dimensions
+      top = y < top ? y : top;
+      bottom = y > bottom ? y : bottom;
+      left = x < left ? x : left;
+      right = x > right ? x : right;
+
+      // draw individual point
+      cv::circle(topviewImg, cv::Point(x, y), 4, color, -1);
+    }
+    // draw enclosing rectangle
+    cv::rectangle(topviewImg, cv::Point(left, top), cv::Point(right, bottom),
+                  color, 2);
+
+    // augment object with stats
+    char str1[200], str2[200];
+    sprintf(str1, "id=%d, #pts=%d", it1->boxID, (int)it1->lidarPoints.size());
+    cv::putText(topviewImg, str1, cv::Point(left - 100, bottom + 50),
+                cv::FONT_ITALIC, 0.75, color);
+    sprintf(str2, "xmin=%2.2f m, yw=%2.2f m", xwmin, ywmax - ywmin);
+    cv::putText(topviewImg, str2, cv::Point(left - 100, bottom + 100),
+                cv::FONT_ITALIC, 0.75, color);
+
+    // plot distance markers
+    float lineSpacing = 2.0; // gap between distance markers
+    int nMarkers = floor(worldSize.height / lineSpacing);
+    for (size_t i = 0; i < nMarkers; ++i) {
+      int y = (-(i * lineSpacing) * imageSize.height / worldSize.height) +
+              imageSize.height;
+      cv::line(topviewImg, cv::Point(0, y), cv::Point(imageSize.width, y),
+               cv::Scalar(255, 150, 150));
+      cv::putText(topviewImg,                             // target image
+                  to_string((int)lineSpacing * i) + " m", // text
+                  cv::Point(4, y - 8),                    // top-left position
+                  cv::FONT_HERSHEY_DUPLEX, 1.0,
+                  CV_RGB(150, 150, 255), // font color
+                  2);
+    }
+  }
+  // display image
+  string windowName = "3D objects";
+  cv::namedWindow(windowName, 2);
+  cv::imshow(windowName, topviewImg);
+  if (bWait)
+    cv::waitKey(0); // wait for key to be pressed
+}
+
 int main() {
   std::vector<LidarPoint> lidarPoints;
   readLidarPts("../dat/C53A3_currLidarPts.dat", lidarPoints);
@@ -192,6 +267,11 @@ int main() {
                        cv::Size(1000, 2000));
     }
   }
+  cv::Size worldSize(25.0, 25.0); // width and height of sensor field in m
+  cv::Size imageSize(1000, 2000); // corresponding top view image in pixel
+  bool bWait = true;
+
+  show3DObjects(boundingBoxes, worldSize, imageSize, bWait);
 
   return 0;
 }
