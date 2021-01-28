@@ -38,6 +38,17 @@ Tracking::Tracking() {
 
 Tracking::~Tracking() {}
 
+void Tracking::CalcQ(const float dt) {
+  float dt_4 = pow(dt, 4) / 4;
+  float dt_3 = pow(dt, 3) / 2;
+  float dt_2 = pow(dt, 2);
+
+  kf_.Q_ = MatrixXd(4, 4);
+  kf_.Q_ << dt_4 * noise_ax, 0, dt_3 * noise_ax, 0, 0, dt_4 * noise_ay, 0,
+      dt_3 * noise_ay, dt_3 * noise_ax, 0, dt_2 * noise_ax, 0, 0,
+      dt_3 * noise_ay, 0, dt_2 * noise_ay;
+}
+
 // Process a single measurement
 void Tracking::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
   if (!is_initialized_) {
@@ -57,11 +68,15 @@ void Tracking::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
   float dt = (measurement_pack.timestamp_ - previous_timestamp_) / 1000000.0;
   previous_timestamp_ = measurement_pack.timestamp_;
 
-  // TODO: YOUR CODE HERE
   // 1. Modify the F matrix so that the time is integrated
+  kf_.F_(0, 2) = dt;
+  kf_.F_(1, 3) = dt;
   // 2. Set the process covariance matrix Q
+  this->CalcQ(dt);
   // 3. Call the Kalman Filter predict() function
+  kf_.Predict();
   // 4. Call the Kalman Filter update() function
+  kf_.Update(measurement_pack.raw_measurements_);
   //      with the most recent raw measurements_
 
   cout << "x_= " << kf_.x_ << endl;

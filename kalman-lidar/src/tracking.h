@@ -17,6 +17,7 @@ public:
 private:
   bool is_initialized_;
   int64_t previous_timestamp_;
+  void CalcQ(const float dt);
 
   // acceleration noise components
   float noise_ax;
