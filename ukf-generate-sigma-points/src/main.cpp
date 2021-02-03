@@ -33,5 +33,9 @@ int main() {
   MatrixXd S_out = MatrixXd(3, 3);
   ukf.PredictRadarMeasurement(&z_out, &S_out);
 
+  VectorXd x_out = VectorXd(5);
+  MatrixXd P_out = MatrixXd(5, 5);
+  ukf.UpdateState(&x_out, &P_out);
+
   return 0;
 }
