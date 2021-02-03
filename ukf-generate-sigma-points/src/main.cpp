@@ -18,5 +18,8 @@ int main() {
   // print result
   std::cout << "Xsig = " << std::endl << Xsig << std::endl;
 
+  MatrixXd Xsig_aug = MatrixXd(7, 15);
+  ukf.AugmentedSigmaPoints(&Xsig_aug);
+
   return 0;
 }
