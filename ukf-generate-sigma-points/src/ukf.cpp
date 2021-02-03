@@ -224,3 +224,181 @@ void UKF::SigmaPointPrediction(MatrixXd *Xsig_out) {
   // 0.3528 0.299973 0.462123 0.376339 0.48417 0.418721 0.3528 0.387441 0.405627
   // 0.243477 0.329261 0.22143 0.286879 0.3528 0.318159
 }
+
+void UKF::PredictMeanAndCovariance(VectorXd *x_out, MatrixXd *P_out) {
+
+  // set state dimension
+  int n_x = 5;
+
+  // set augmented dimension
+  int n_aug = 7;
+
+  // define spreading parameter
+  double lambda = 3 - n_aug;
+
+  // create example matrix with predicted sigma points
+  MatrixXd Xsig_pred = MatrixXd(n_x, 2 * n_aug + 1);
+  Xsig_pred << 5.9374, 6.0640, 5.925, 5.9436, 5.9266, 5.9374, 5.9389, 5.9374,
+      5.8106, 5.9457, 5.9310, 5.9465, 5.9374, 5.9359, 5.93744, 1.48, 1.4436,
+      1.660, 1.4934, 1.5036, 1.48, 1.4868, 1.48, 1.5271, 1.3104, 1.4787, 1.4674,
+      1.48, 1.4851, 1.486, 2.204, 2.2841, 2.2455, 2.2958, 2.204, 2.204, 2.2395,
+      2.204, 2.1256, 2.1642, 2.1139, 2.204, 2.204, 2.1702, 2.2049, 0.5367,
+      0.47338, 0.67809, 0.55455, 0.64364, 0.54337, 0.5367, 0.53851, 0.60017,
+      0.39546, 0.51900, 0.42991, 0.530188, 0.5367, 0.535048, 0.352, 0.29997,
+      0.46212, 0.37633, 0.4841, 0.41872, 0.352, 0.38744, 0.40562, 0.24347,
+      0.32926, 0.2214, 0.28687, 0.352, 0.318159;
+
+  // create vector for weights
+  VectorXd weights = VectorXd(2 * n_aug + 1);
+
+  // create vector for predicted state
+  VectorXd x = VectorXd::Zero(n_x);
+
+  // create covariance matrix for prediction
+  MatrixXd P = MatrixXd::Zero(n_x, n_x);
+
+  for (int i = 0; i < 2 * n_aug + 1; i++) {
+    float w = i == 0 ? lambda / (lambda + n_aug * 1.0)
+                     : 1 / (2 * (lambda + n_aug * 1.0));
+    // predict state mean
+    x += w * Xsig_pred.col(i);
+  }
+
+  for (int i = 0; i < 2 * n_aug + 1; i++) {
+    float w = i == 0 ? lambda / (lambda + n_aug * 1.0)
+                     : 1 / (2 * (lambda + n_aug * 1.0));
+    // state difference
+    VectorXd x_diff = Xsig_pred.col(i) - x;
+    // angle normalization
+    while (x_diff(3) > M_PI)
+      x_diff(3) -= 2. * M_PI;
+    while (x_diff(3) < -M_PI)
+      x_diff(3) += 2. * M_PI;
+    // predict state covariance matrix
+    P += w * x_diff * x_diff.transpose();
+  }
+
+  // print result
+  std::cout << "Predicted state" << std::endl;
+  std::cout << x << std::endl;
+  std::cout << "Predicted covariance matrix" << std::endl;
+  std::cout << P << std::endl;
+
+  // write result
+  *x_out = x;
+  *P_out = P;
+
+  // expected result x:
+  // x =
+  // 5.93637
+  // 1.49035
+  // 2.20528
+  // 0.536853
+  // 0.353577
+
+  // expected result p:
+  // P =
+  // 0.00543425 -0.0024053 0.00341576 -0.00348196 -0.00299378
+  // -0.0024053 0.010845 0.0014923 0.00980182 0.00791091
+  // 0.00341576 0.0014923 0.00580129 0.000778632 0.000792973
+  // -0.00348196 0.00980182 0.000778632 0.0119238 0.0112491
+  // -0.00299378 0.00791091 0.000792973 0.0112491 0.0126972
+}
+
+void UKF::PredictRadarMeasurement(VectorXd *z_out, MatrixXd *S_out) {
+
+  // set state dimension
+  int n_x = 5;
+
+  // set augmented dimension
+  int n_aug = 7;
+
+  // set measurement dimension, radar can measure r, phi, and r_dot
+  int n_z = 3;
+
+  // define spreading parameter
+  double lambda = 3 - n_aug;
+
+  // radar measurement noise standard deviation radius in m
+  double std_radr = 0.3;
+
+  // radar measurement noise standard deviation angle in rad
+  double std_radphi = 0.0175;
+
+  // radar measurement noise standard deviation radius change in m/s
+  double std_radrd = 0.1;
+
+  MatrixXd R = MatrixXd(n_z, n_z);
+  R << std_radr * std_radr, 0, 0, 0, std_radphi * std_radphi, 0, 0, 0,
+      std_radrd * std_radrd;
+
+  // create example matrix with predicted sigma points
+  MatrixXd Xsig_pred = MatrixXd(n_x, 2 * n_aug + 1);
+  Xsig_pred << 5.9374, 6.0640, 5.925, 5.9436, 5.9266, 5.9374, 5.9389, 5.9374,
+      5.8106, 5.9457, 5.9310, 5.9465, 5.9374, 5.9359, 5.93744, 1.48, 1.4436,
+      1.660, 1.4934, 1.5036, 1.48, 1.4868, 1.48, 1.5271, 1.3104, 1.4787, 1.4674,
+      1.48, 1.4851, 1.486, 2.204, 2.2841, 2.2455, 2.2958, 2.204, 2.204, 2.2395,
+      2.204, 2.1256, 2.1642, 2.1139, 2.204, 2.204, 2.1702, 2.2049, 0.5367,
+      0.47338, 0.67809, 0.55455, 0.64364, 0.54337, 0.5367, 0.53851, 0.60017,
+      0.39546, 0.51900, 0.42991, 0.530188, 0.5367, 0.535048, 0.352, 0.29997,
+      0.46212, 0.37633, 0.4841, 0.41872, 0.352, 0.38744, 0.40562, 0.24347,
+      0.32926, 0.2214, 0.28687, 0.352, 0.318159;
+
+  // create matrix for sigma points in measurement space
+  MatrixXd Zsig = MatrixXd(n_z, 2 * n_aug + 1);
+
+  // transform sigma points into measurement space
+  for (int i = 0; i < 2 * n_aug + 1; i++) {
+    MatrixXd &x = Xsig_pred;
+    double px = x.col(i)[0], py = x.col(i)[1], v = x.col(i)[2];
+    double psi = x.col(i)[3], dpsi = x.col(i)[4];
+    double d = sqrt(px * px + py * py);
+    Zsig.col(i) << d, atan(py / px), (px * cos(psi) + py * sin(psi)) * v / d;
+  }
+
+  // mean predicted measurement
+  VectorXd z_pred = VectorXd::Zero(n_z);
+
+  // measurement covariance matrix S
+  MatrixXd S = MatrixXd::Zero(n_z, n_z);
+
+  for (int i = 0; i < 2 * n_aug + 1; i++) {
+    // set weight
+    double w = i == 0 ? lambda / (lambda + n_aug) : 0.5 / (lambda + n_aug);
+    // calculate mean predicted measurement
+    z_pred += w * Zsig.col(i);
+  }
+
+  for (int i = 0; i < 2 * n_aug + 1; i++) {
+    // set weight
+    double w = i == 0 ? lambda / (lambda + n_aug) : 0.5 / (lambda + n_aug);
+    // calculate innovation covariance matrix S
+    VectorXd z_diff = Zsig.col(i) - z_pred;
+    while (z_diff[1] > M_PI)
+      z_diff[1] -= 2. * M_PI;
+    while (z_diff[1] < -M_PI)
+      z_diff[1] += 2. * M_PI;
+    S += w * z_diff * z_diff.transpose();
+  }
+  S += R;
+
+  // print result
+  std::cout << "z_pred: " << std::endl << z_pred << std::endl;
+  std::cout << "S: " << std::endl << S << std::endl;
+
+  // write result
+  *z_out = z_pred;
+  *S_out = S;
+
+  //   expected result z_out:
+  // z_pred =
+  // 6.12155
+  // 0.245993
+  // 2.10313
+
+  // expected result s_out:
+  // S =
+  // 0.0946171 -0.000139448 0.00407016
+  // -0.000139448 0.000617548 -0.000770652
+  // 0.00407016 -0.000770652 0.0180917
+}

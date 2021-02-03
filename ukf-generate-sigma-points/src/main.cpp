@@ -3,6 +3,7 @@
 #include <iostream>
 
 using Eigen::MatrixXd;
+using Eigen::VectorXd;
 
 int main() {
 
@@ -23,6 +24,14 @@ int main() {
 
   MatrixXd Xsig_pred = MatrixXd(15, 5);
   ukf.SigmaPointPrediction(&Xsig_pred);
+
+  VectorXd x_pred = VectorXd(5);
+  MatrixXd P_pred = MatrixXd(5, 5);
+  ukf.PredictMeanAndCovariance(&x_pred, &P_pred);
+
+  VectorXd z_out = VectorXd(3);
+  MatrixXd S_out = MatrixXd(3, 3);
+  ukf.PredictRadarMeasurement(&z_out, &S_out);
 
   return 0;
 }
